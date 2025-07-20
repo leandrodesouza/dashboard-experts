@@ -5,6 +5,7 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Projeto Experts - AlfaCon</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -173,6 +174,14 @@
             box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
         }
 
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 5px 15px rgba(149, 165, 166, 0.4);
+        }
+
         .table-container {
             overflow-x: auto;
             margin-top: 20px;
@@ -253,6 +262,52 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            border-bottom-color: #3498db;
+            color: #3498db;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -269,10 +324,73 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Modal de Login -->
+    <div id="login-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Login - Dashboard Projeto Experts</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Usuário:</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Senha:</label>
+                    <input type="password" id="password" required>
+                </div>
+                <div id="login-alert"></div>
+                <button type="submit" class="btn">Entrar</button>
+            </form>
+            <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                <p><strong>Credenciais padrão:</strong></p>
+                <p>Usuário: <code>admin</code></p>
+                <p>Senha: <code>admin123</code></p>
+                <small>Por favor, altere a senha após o primeiro login.</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="dashboard-content" style="display: none;">
         <div class="header">
-            <h1>Dashboard Projeto Experts</h1>
-            <p>Monitoramento de Engajamento dos Professores AlfaCon</p>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>Dashboard Projeto Experts</h1>
+                    <p>Monitoramento de Engajamento dos Professores AlfaCon</p>
+                </div>
+                <div>
+                    <span id="user-info" style="margin-right: 15px;"></span>
+                    <button class="btn btn-secondary" onclick="logout()">Sair</button>
+                    <button class="btn btn-warning" onclick="showChangePasswordModal()">Alterar Senha</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Filtros -->
+        <div class="section" style="margin-bottom: 30px;">
+            <h2>Filtros</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end;">
+                <div class="form-group">
+                    <label for="filtro-periodo">Período:</label>
+                    <select id="filtro-periodo" onchange="aplicarFiltros()">
+                        <option value="todos">Todos os períodos</option>
+                        <option value="ultimos_7_dias">Últimos 7 dias</option>
+                        <option value="mes_atual">Mês atual</option>
+                        <option value="personalizado">Período personalizado</option>
+                    </select>
+                </div>
+                <div class="form-group" id="data-inicio-group" style="display: none;">
+                    <label for="data-inicio">Data Início:</label>
+                    <input type="date" id="data-inicio" onchange="aplicarFiltros()">
+                </div>
+                <div class="form-group" id="data-fim-group" style="display: none;">
+                    <label for="data-fim">Data Fim:</label>
+                    <input type="date" id="data-fim" onchange="aplicarFiltros()">
+                </div>
+                <div>
+                    <button class="btn btn-secondary" onclick="limparFiltros()">Limpar Filtros</button>
+                    <button class="btn btn-success" onclick="exportarCSV()">Exportar CSV</button>
+                    <button class="btn btn-info" onclick="exportarPDF()">Exportar PDF</button>
+                </div>
+            </div>
         </div>
 
         <div class="stats-grid">
@@ -301,6 +419,7 @@
         <div class="main-content">
             <div class="section">
                 <h2>Registrar Nova Demanda</h2>
+                <div id="alert-container"></div>
                 <form id="nova-demanda-form">
                     <div class="form-group">
                         <label for="professor">Professor:</label>
@@ -335,15 +454,19 @@
                         <input type="date" id="prazo-entrega" required>
                     </div>
                     <button type="submit" class="btn">Registrar Demanda</button>
+                    <button type="button" class="btn btn-secondary" onclick="gerarDadosExemplo()">Gerar Dados de Exemplo</button>
                 </form>
             </div>
 
             <div class="section">
                 <h2>Registrar Resultado</h2>
+                <div id="alert-container-resultado"></div>
                 <form id="resultado-form">
                     <div class="form-group">
                         <label for="demanda-id">ID da Demanda:</label>
-                        <input type="text" id="demanda-id" placeholder="Ex: DEM001" required>
+                        <select id="demanda-id" required>
+                            <option value="">Selecione uma demanda</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="material-entregue">Material Entregue:</label>
@@ -371,96 +494,36 @@
         </div>
 
         <div class="section full-width">
+            <h2>Análises e Gráficos</h2>
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('demandas-chart')">Demandas por Professor</div>
+                <div class="tab" onclick="showTab('engajamento-chart')">Engajamento por Tipo</div>
+                <div class="tab" onclick="showTab('timeline-chart')">Timeline de Entregas</div>
+            </div>
+            
+            <div id="demandas-chart" class="tab-content active">
+                <div class="chart-container">
+                    <canvas id="chartDemandas"></canvas>
+                </div>
+            </div>
+            
+            <div id="engajamento-chart" class="tab-content">
+                <div class="chart-container">
+                    <canvas id="chartEngajamento"></canvas>
+                </div>
+            </div>
+            
+            <div id="timeline-chart" class="tab-content">
+                <div class="chart-container">
+                    <canvas id="chartTimeline"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="section full-width">
             <h2>Professores do Projeto</h2>
-            <div class="professor-list">
-                <div class="professor-card">
-                    <div class="professor-name">Pedro Campos</div>
-                    <div class="professor-subject">Matemática/RLM e Estatística</div>
-                    <div class="professor-stats">
-                        <span>Demandas: <strong id="pedro-demandas">0</strong></span>
-                        <span>Entregues: <strong id="pedro-entregues">0</strong></span>
-                    </div>
-                </div>
-                <div class="professor-card">
-                    <div class="professor-name">Pablo</div>
-                    <div class="professor-subject">Português e Redação Oficial</div>
-                    <div class="professor-stats">
-                        <span>Demandas: <strong id="pablo-demandas">0</strong></span>
-                        <span>Entregues: <strong id="pablo-entregues">0</strong></span>
-                    </div>
-                </div>
-                <div class="professor-card">
-                    <div class="professor-name">Rafael Araújo</div>
-                    <div class="professor-subject">Informática</div>
-                    <div class="professor-stats">
-                        <span>Demandas: <strong id="rafael-demandas">0</strong></span>
-                        <span>Entregues: <strong id="rafael-entregues">0</strong></span>
-                    </div>
-                </div>
-                <div class="professor-card">
-                    <div class="professor-name">Samuel</div>
-                    <div class="professor-subject">Contabilidade</div>
-                    <div class="professor-stats">
-                        <span>Demandas: <strong id="samuel-demandas">0</strong></span>
-                        <span>Entregues: <strong id="samuel-entregues">0</strong></span>
-                    </div>
-                </div>
-                <div class="professor-card">
-                    <div class="professor-name">Tiago Vidal</div>
-                    <div class="professor-subject">Direito Administrativo</div>
-                    <div class="professor-stats">
-                        <span>Demandas: <strong id="tiago-demandas">0</strong></span>
-                        <span>Entregues: <strong id="tiago-entregues">0</strong></span>
-                    </div>
-                </div>
-                <div class="professor-card">
-                    <div class="professor-name">Rogério Dalvipa</div>
-                    <div class="professor-subject">Direito Constitucional</div>
-                    <div class="professor-stats">
-                        <span>Demandas: <strong id="rogerio-demandas">0</strong></span>
-                        <span>Entregues: <strong id="rogerio-entregues">0</strong></span>
-                    </div>
-                </div>
-                <div class="professor-card">
-                    <div class="professor-name">Lucas Fávero</div>
-                    <div class="professor-subject">Direito Penal</div>
-                    <div class="professor-stats">
-                        <span>Demandas: <strong id="lucas-demandas">0</strong></span>
-                        <span>Entregues: <strong id="lucas-entregues">0</strong></span>
-                    </div>
-                </div>
-                <div class="professor-card">
-                    <div class="professor-name">Pedro Canezin</div>
-                    <div class="professor-subject">Processo Penal</div>
-                    <div class="professor-stats">
-                        <span>Demandas: <strong id="canezin-demandas">0</strong></span>
-                        <span>Entregues: <strong id="canezin-entregues">0</strong></span>
-                    </div>
-                </div>
-                <div class="professor-card">
-                    <div class="professor-name">Filipe Ávila</div>
-                    <div class="professor-subject">Legislação Especial</div>
-                    <div class="professor-stats">
-                        <span>Demandas: <strong id="filipe-demandas">0</strong></span>
-                        <span>Entregues: <strong id="filipe-entregues">0</strong></span>
-                    </div>
-                </div>
-                <div class="professor-card">
-                    <div class="professor-name">João Paulo</div>
-                    <div class="professor-subject">Arquivologia</div>
-                    <div class="professor-stats">
-                        <span>Demandas: <strong id="joao-demandas">0</strong></span>
-                        <span>Entregues: <strong id="joao-entregues">0</strong></span>
-                    </div>
-                </div>
-                <div class="professor-card">
-                    <div class="professor-name">Heitor</div>
-                    <div class="professor-subject">Redação</div>
-                    <div class="professor-stats">
-                        <span>Demandas: <strong id="heitor-demandas">0</strong></span>
-                        <span>Entregues: <strong id="heitor-entregues">0</strong></span>
-                    </div>
-                </div>
+            <div class="professor-list" id="professor-list">
+                <!-- Professores serão inseridos dinamicamente -->
             </div>
         </div>
 
@@ -479,13 +542,79 @@
                             <th>Alcance</th>
                             <th>Curtidas</th>
                             <th>Comentários</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         <!-- Dados serão inseridos dinamicamente -->
                     </tbody>
-                </table>
-            </div>
+        </table>
+        </div>
+
+    </div> <!-- Fim do dashboard-content -->
+
+    <!-- Modal de Alteração de Senha -->
+    <div id="change-password-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Alterar Senha</h2>
+            <form id="change-password-form">
+                <div class="form-group">
+                    <label for="current-password">Senha Atual:</label>
+                    <input type="password" id="current-password" required>
+                </div>
+                <div class="form-group">
+                    <label for="new-password">Nova Senha:</label>
+                    <input type="password" id="new-password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">Confirmar Nova Senha:</label>
+                    <input type="password" id="confirm-password" required minlength="6">
+                </div>
+                <div id="change-password-alert"></div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-success">Alterar Senha</button>
+                    <button type="button" class="btn btn-secondary" onclick="hideChangePasswordModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <style>
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
         </div>
     </div>
 
@@ -493,10 +622,40 @@
         // Dados simulados para demonstração
         let demandas = [];
         let contadorDemandas = 1;
+        let charts = {};
+
+        // Lista de professores com suas disciplinas
+        const professores = [
+            { nome: 'Pedro Campos', disciplina: 'Matemática/RLM e Estatística' },
+            { nome: 'Pablo', disciplina: 'Português e Redação Oficial' },
+            { nome: 'Rafael Araújo', disciplina: 'Informática' },
+            { nome: 'Samuel', disciplina: 'Contabilidade' },
+            { nome: 'Tiago Vidal', disciplina: 'Direito Administrativo' },
+            { nome: 'Rogério Dalvipa', disciplina: 'Direito Constitucional' },
+            { nome: 'Lucas Fávero', disciplina: 'Direito Penal' },
+            { nome: 'Pedro Canezin', disciplina: 'Processo Penal' },
+            { nome: 'Filipe Ávila', disciplina: 'Legislação Especial' },
+            { nome: 'João Paulo', disciplina: 'Arquivologia' },
+            { nome: 'Heitor', disciplina: 'Redação' }
+        ];
 
         // Função para gerar ID único
         function gerarIdDemanda() {
             return `DEM${String(contadorDemandas++).padStart(3, '0')}`;
+        }
+
+        // Função para mostrar alertas
+        function mostrarAlerta(containerId, mensagem, tipo = 'success') {
+            const container = document.getElementById(containerId);
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${tipo}`;
+            alert.textContent = mensagem;
+            container.innerHTML = '';
+            container.appendChild(alert);
+            
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 3000);
         }
 
         // Função para atualizar estatísticas
@@ -515,24 +674,28 @@
             document.getElementById('engajamento-medio').textContent = `${engajamentoMedio}%`;
         }
 
-        // Função para atualizar estatísticas dos professores
-        function atualizarEstatisticasProfessores() {
-            const professores = [
-                'Pedro Campos', 'Pablo', 'Rafael Araújo', 'Samuel', 'Tiago Vidal',
-                'Rogério Dalvipa', 'Lucas Fávero', 'Pedro Canezin', 'Filipe Ávila',
-                'João Paulo', 'Heitor'
-            ];
+        // Função para atualizar lista de professores
+        function atualizarListaProfessores() {
+            const container = document.getElementById('professor-list');
+            container.innerHTML = '';
 
             professores.forEach(professor => {
-                const demandasProf = demandas.filter(d => d.professor === professor);
+                const demandasProf = demandas.filter(d => d.professor === professor.nome);
                 const entreguesProf = demandasProf.filter(d => d.materialEntregue === 'Sim');
+                const alcanceProf = demandasProf.reduce((sum, d) => sum + (parseInt(d.alcance) || 0), 0);
                 
-                const nomeId = professor.toLowerCase().replace(/\s+/g, '-').replace('ç', 'c').replace('ã', 'a').replace('é', 'e');
-                const demandaElement = document.getElementById(`${nomeId}-demandas`);
-                const entregueElement = document.getElementById(`${nomeId}-entregues`);
-                
-                if (demandaElement) demandaElement.textContent = demandasProf.length;
-                if (entregueElement) entregueElement.textContent = entreguesProf.length;
+                const card = document.createElement('div');
+                card.className = 'professor-card';
+                card.innerHTML = `
+                    <div class="professor-name">${professor.nome}</div>
+                    <div class="professor-subject">${professor.disciplina}</div>
+                    <div class="professor-stats">
+                        <span>Demandas: <strong>${demandasProf.length}</strong></span>
+                        <span>Entregues: <strong>${entreguesProf.length}</strong></span>
+                        <span>Alcance: <strong>${alcanceProf.toLocaleString()}</strong></span>
+                    </div>
+                `;
+                container.appendChild(card);
             });
         }
 
@@ -553,63 +716,690 @@
                     <td>${demanda.alcance || '-'}</td>
                     <td>${demanda.curtidas || '-'}</td>
                     <td>${demanda.comentarios || '-'}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="excluirDemanda('${demanda.id}')">Excluir</button>
+                    </td>
                 `;
             });
         }
 
-        // Event listener para nova demanda
-        document.getElementById('nova-demanda-form').addEventListener('submit', function(e) {
+        // Função para atualizar select de demandas
+        function atualizarSelectDemandas() {
+            const select = document.getElementById('demanda-id');
+            select.innerHTML = '<option value="">Selecione uma demanda</option>';
+            
+            demandas.filter(d => !d.materialEntregue || d.materialEntregue === 'Não').forEach(demanda => {
+                const option = document.createElement('option');
+                option.value = demanda.id;
+                option.textContent = `${demanda.id} - ${demanda.professor} (${demanda.tipoConteudo})`;
+                select.appendChild(option);
+            });
+        }
+
+        // Função para excluir demanda
+        function excluirDemanda(id) {
+            if (confirm('Tem certeza que deseja excluir esta demanda?')) {
+                demandas = demandas.filter(d => d.id !== id);
+                atualizarTudo();
+                mostrarAlerta('alert-container', 'Demanda excluída com sucesso!', 'success');
+            }
+        }
+
+        // Função para gerar dados de exemplo
+        function gerarDadosExemplo() {
+            const exemplos = [
+                { professor: 'Pedro Campos', tipo: 'Reels', alcance: 1500, curtidas: 120, comentarios: 15 },
+                { professor: 'Pablo', tipo: 'Stories', alcance: 800, curtidas: 65, comentarios: 8 },
+                { professor: 'Rafael Araújo', tipo: 'Feed', alcance: 2200, curtidas: 180, comentarios: 25 },
+                { professor: 'Samuel', tipo: 'Carrossel', alcance: 1800, curtidas: 145, comentarios: 20 },
+                { professor: 'Tiago Vidal', tipo: 'Reels', alcance: 1200, curtidas: 95, comentarios: 12 }
+            ];
+
+            exemplos.forEach((exemplo, index) => {
+                const demanda = {
+                    id: gerarIdDemanda(),
+                    professor: exemplo.professor,
+                    tipoConteudo: exemplo.tipo,
+                    dataEnvio: new Date(Date.now() - (index * 2 * 24 * 60 * 60 * 1000)).toLocaleDateString('pt-BR'),
+                    prazoEntrega: new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)).toLocaleDateString('pt-BR'),
+                    materialEntregue: 'Sim',
+                    alcance: exemplo.alcance,
+                    curtidas: exemplo.curtidas,
+                    comentarios: exemplo.comentarios
+                };
+                demandas.push(demanda);
+            });
+
+            atualizarTudo();
+            mostrarAlerta('alert-container', 'Dados de exemplo gerados com sucesso!', 'success');
+        }
+
+        // Função para mostrar tabs
+        function showTab(tabId) {
+            // Esconder todas as tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Mostrar tab selecionada
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+
+            // Atualizar gráficos
+            setTimeout(() => {
+                atualizarGraficos();
+            }, 100);
+        }
+
+        // Função para atualizar gráficos
+        function atualizarGraficos() {
+            // Gráfico de demandas por professor
+            const ctx1 = document.getElementById('chartDemandas').getContext('2d');
+            if (charts.demandas) charts.demandas.destroy();
+            
+            const demandasPorProf = professores.map(prof => {
+                return demandas.filter(d => d.professor === prof.nome).length;
+            });
+
+            charts.demandas = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: professores.map(p => p.nome),
+                    datasets: [{
+                        label: 'Demandas',
+                        data: demandasPorProf,
+                        backgroundColor: 'rgba(52, 152, 219, 0.8)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de engajamento por tipo
+            const ctx2 = document.getElementById('chartEngajamento').getContext('2d');
+            if (charts.engajamento) charts.engajamento.destroy();
+            
+            const tipos = ['Reels', 'Stories', 'Feed', 'Video Longo', 'Carrossel'];
+            const engajamentoPorTipo = tipos.map(tipo => {
+                const demandasTipo = demandas.filter(d => d.tipoConteudo === tipo);
+                const totalCurtidas = demandasTipo.reduce((sum, d) => sum + (parseInt(d.curtidas) || 0), 0);
+                const totalComentarios = demandasTipo.reduce((sum, d) => sum + (parseInt(d.comentarios) || 0), 0);
+                return totalCurtidas + totalComentarios;
+            });
+
+            charts.engajamento = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: tipos,
+                    datasets: [{
+                        data: engajamentoPorTipo,
+                        backgroundColor: [
+                            'rgba(52, 152, 219, 0.8)',
+                            'rgba(46, 204, 113, 0.8)',
+                            'rgba(155, 89, 182, 0.8)',
+                            'rgba(241, 196, 15, 0.8)',
+                            'rgba(231, 76, 60, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Gráfico de timeline
+            const ctx3 = document.getElementById('chartTimeline').getContext('2d');
+            if (charts.timeline) charts.timeline.destroy();
+            
+            const ultimosDias = [];
+            const entregasPorDia = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const data = new Date(Date.now() - (i * 24 * 60 * 60 * 1000));
+                ultimosDias.push(data.toLocaleDateString('pt-BR'));
+                
+                const entregasNoDia = demandas.filter(d => {
+                    return d.materialEntregue === 'Sim' && d.dataEnvio === data.toLocaleDateString('pt-BR');
+                }).length;
+                
+                entregasPorDia.push(entregasNoDia);
+            }
+
+            charts.timeline = new Chart(ctx3, {
+                type: 'line',
+                data: {
+                    labels: ultimosDias,
+                    datasets: [{
+                        label: 'Entregas',
+                        data: entregasPorDia,
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Variáveis globais de autenticação
+        let isAuthenticated = false;
+        let currentUser = null;
+
+        // Função para verificar status de autenticação
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/auth/status');
+                const data = await response.json();
+                
+                if (data.authenticated) {
+                    isAuthenticated = true;
+                    currentUser = data.user;
+                    showDashboard();
+                } else {
+                    showLoginModal();
+                }
+            } catch (error) {
+                console.error('Erro ao verificar autenticação:', error);
+                showLoginModal();
+            }
+        }
+
+        // Função para mostrar modal de login
+        function showLoginModal() {
+            document.getElementById('login-modal').style.display = 'flex';
+            document.getElementById('dashboard-content').style.display = 'none';
+        }
+
+        // Função para mostrar dashboard
+        function showDashboard() {
+            document.getElementById('login-modal').style.display = 'none';
+            document.getElementById('dashboard-content').style.display = 'block';
+            
+            if (currentUser) {
+                document.getElementById('user-info').textContent = `Olá, ${currentUser.nome}`;
+            }
+            
+            atualizarTudo();
+        }
+
+        // Função para fazer login
+        async function login(username, password) {
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    isAuthenticated = true;
+                    currentUser = data.user;
+                    showDashboard();
+                    return { success: true };
+                } else {
+                    return { success: false, error: data.error };
+                }
+            } catch (error) {
+                console.error('Erro no login:', error);
+                return { success: false, error: 'Erro de conexão' };
+            }
+        }
+
+        // Função para fazer logout
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                isAuthenticated = false;
+                currentUser = null;
+                showLoginModal();
+            } catch (error) {
+                console.error('Erro no logout:', error);
+                // Mesmo com erro, fazer logout local
+                isAuthenticated = false;
+                currentUser = null;
+                showLoginModal();
+            }
+        }
+
+        // Função para mostrar modal de alteração de senha
+        function showChangePasswordModal() {
+            document.getElementById('change-password-modal').style.display = 'flex';
+        }
+
+        // Função para esconder modal de alteração de senha
+        function hideChangePasswordModal() {
+            document.getElementById('change-password-modal').style.display = 'none';
+            document.getElementById('change-password-form').reset();
+            document.getElementById('change-password-alert').innerHTML = '';
+        }
+
+        // Função para alterar senha
+        async function changePassword(currentPassword, newPassword) {
+            try {
+                const response = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    return { success: true, message: data.message };
+                } else {
+                    return { success: false, error: data.error };
+                }
+            } catch (error) {
+                console.error('Erro ao alterar senha:', error);
+                return { success: false, error: 'Erro de conexão' };
+            }
+        }
+
+        // Event listener para formulário de login
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const novaDemanda = {
-                id: gerarIdDemanda(),
-                professor: document.getElementById('professor').value,
-                tipoConteudo: document.getElementById('tipo-conteudo').value,
-                dataEnvio: new Date().toLocaleDateString('pt-BR'),
-                prazoEntrega: new Date(document.getElementById('prazo-entrega').value).toLocaleDateString('pt-BR'),
-                materialEntregue: null,
-                alcance: null,
-                curtidas: null,
-                comentarios: null
-            };
-
-            demandas.push(novaDemanda);
-            atualizarEstatisticas();
-            atualizarEstatisticasProfessores();
-            atualizarTabela();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
             
-            this.reset();
-            alert('Demanda registrada com sucesso!');
-        });
-
-        // Event listener para resultado
-        document.getElementById('resultado-form').addEventListener('submit', function(e) {
-            e.preventDefault();
+            const result = await login(username, password);
             
-            const demandaId = document.getElementById('demanda-id').value;
-            const demanda = demandas.find(d => d.id === demandaId);
-            
-            if (demanda) {
-                demanda.materialEntregue = document.getElementById('material-entregue').value;
-                demanda.alcance = document.getElementById('alcance').value;
-                demanda.curtidas = document.getElementById('curtidas').value;
-                demanda.comentarios = document.getElementById('comentarios').value;
-                
-                atualizarEstatisticas();
-                atualizarEstatisticasProfessores();
-                atualizarTabela();
-                
-                this.reset();
-                alert('Resultado registrado com sucesso!');
+            if (result.success) {
+                document.getElementById('login-alert').innerHTML = '';
             } else {
-                alert('ID da demanda não encontrado!');
+                mostrarAlerta('login-alert', result.error, 'error');
             }
         });
 
+        // Event listener para formulário de alteração de senha
+        document.getElementById('change-password-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            if (newPassword !== confirmPassword) {
+                mostrarAlerta('change-password-alert', 'As senhas não coincidem', 'error');
+                return;
+            }
+            
+            const result = await changePassword(currentPassword, newPassword);
+            
+            if (result.success) {
+                mostrarAlerta('change-password-alert', result.message, 'success');
+                setTimeout(() => {
+                    hideChangePasswordModal();
+                }, 2000);
+            } else {
+                mostrarAlerta('change-password-alert', result.error, 'error');
+            }
+        });
+
+        // Interceptar requisições para tratar erros de autenticação
+        const originalFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const response = await originalFetch.apply(this, args);
+            
+            if (response.status === 401) {
+                // Token expirado ou não autenticado
+                isAuthenticated = false;
+                currentUser = null;
+                showLoginModal();
+                mostrarAlerta('login-alert', 'Sessão expirada. Faça login novamente.', 'error');
+            }
+            
+            return response;
+        };
+
+        // Variáveis globais para filtros
+        let filtroAtual = {
+            periodo: 'todos',
+            dataInicio: null,
+            dataFim: null
+        };
+
+        // Função para aplicar filtros
+        function aplicarFiltros() {
+            const periodo = document.getElementById('filtro-periodo').value;
+            const dataInicio = document.getElementById('data-inicio').value;
+            const dataFim = document.getElementById('data-fim').value;
+
+            filtroAtual = {
+                periodo: periodo,
+                dataInicio: dataInicio,
+                dataFim: dataFim
+            };
+
+            // Mostrar/ocultar campos de data personalizada
+            const dataInicioGroup = document.getElementById('data-inicio-group');
+            const dataFimGroup = document.getElementById('data-fim-group');
+            
+            if (periodo === 'personalizado') {
+                dataInicioGroup.style.display = 'block';
+                dataFimGroup.style.display = 'block';
+            } else {
+                dataInicioGroup.style.display = 'none';
+                dataFimGroup.style.display = 'none';
+            }
+
+            // Atualizar dados com filtros
+            atualizarDadosComFiltros();
+        }
+
+        // Função para limpar filtros
+        function limparFiltros() {
+            document.getElementById('filtro-periodo').value = 'todos';
+            document.getElementById('data-inicio').value = '';
+            document.getElementById('data-fim').value = '';
+            
+            filtroAtual = {
+                periodo: 'todos',
+                dataInicio: null,
+                dataFim: null
+            };
+
+            document.getElementById('data-inicio-group').style.display = 'none';
+            document.getElementById('data-fim-group').style.display = 'none';
+
+            atualizarDadosComFiltros();
+        }
+
+        // Função para construir URL com parâmetros de filtro
+        function construirUrlComFiltros(baseUrl) {
+            const params = new URLSearchParams();
+            
+            if (filtroAtual.periodo !== 'todos') {
+                params.append('periodo', filtroAtual.periodo);
+            }
+            
+            if (filtroAtual.periodo === 'personalizado') {
+                if (filtroAtual.dataInicio) {
+                    params.append('data_inicio', filtroAtual.dataInicio);
+                }
+                if (filtroAtual.dataFim) {
+                    params.append('data_fim', filtroAtual.dataFim);
+                }
+            }
+
+            return params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+        }
+
+        // Função para atualizar dados com filtros
+        async function atualizarDadosComFiltros() {
+            try {
+                // Atualizar estatísticas
+                const estatisticasUrl = construirUrlComFiltros('/api/estatisticas');
+                const estatisticasResponse = await fetch(estatisticasUrl);
+                const estatisticas = await estatisticasResponse.json();
+                
+                document.getElementById('total-demandas').textContent = estatisticas.total_demandas;
+                document.getElementById('materiais-entregues').textContent = `${estatisticas.materiais_entregues}/${estatisticas.total_demandas}`;
+                document.getElementById('alcance-total').textContent = estatisticas.alcance_total.toLocaleString();
+                document.getElementById('engajamento-medio').textContent = `${estatisticas.engajamento_medio}%`;
+
+                // Atualizar estatísticas dos professores
+                const professoresUrl = construirUrlComFiltros('/api/professores/estatisticas');
+                const professoresResponse = await fetch(professoresUrl);
+                const professoresStats = await professoresResponse.json();
+                atualizarListaProfessoresComDados(professoresStats);
+
+                // Atualizar tabela de demandas
+                const demandasUrl = construirUrlComFiltros('/api/demandas');
+                const demandasResponse = await fetch(demandasUrl);
+                const demandas = await demandasResponse.json();
+                atualizarTabelaComDados(demandas);
+
+            } catch (error) {
+                console.error('Erro ao atualizar dados com filtros:', error);
+                mostrarAlerta('alert-container', 'Erro ao aplicar filtros!', 'error');
+            }
+        }
+
+        // Função para atualizar lista de professores com dados
+        function atualizarListaProfessoresComDados(professoresStats) {
+            const container = document.getElementById('professor-list');
+            container.innerHTML = '';
+
+            const professores = [
+                { nome: 'Pedro Campos', disciplina: 'Matemática/RLM e Estatística' },
+                { nome: 'Pablo', disciplina: 'Português e Redação Oficial' },
+                { nome: 'Rafael Araújo', disciplina: 'Informática' },
+                { nome: 'Samuel', disciplina: 'Contabilidade' },
+                { nome: 'Tiago Vidal', disciplina: 'Direito Administrativo' },
+                { nome: 'Rogério Dalvipa', disciplina: 'Direito Constitucional' },
+                { nome: 'Lucas Fávero', disciplina: 'Direito Penal' },
+                { nome: 'Pedro Canezin', disciplina: 'Processo Penal' },
+                { nome: 'Filipe Ávila', disciplina: 'Legislação Especial' },
+                { nome: 'João Paulo', disciplina: 'Arquivologia' },
+                { nome: 'Heitor', disciplina: 'Redação' }
+            ];
+
+            professores.forEach(professor => {
+                const stats = professoresStats[professor.nome] || { demandas: 0, entregues: 0, alcance_total: 0 };
+                
+                const card = document.createElement('div');
+                card.className = 'professor-card';
+                card.innerHTML = `
+                    <div class="professor-name">${professor.nome}</div>
+                    <div class="professor-subject">${professor.disciplina}</div>
+                    <div class="professor-stats">
+                        <span>Demandas: <strong>${stats.demandas}</strong></span>
+                        <span>Entregues: <strong>${stats.entregues}</strong></span>
+                        <span>Alcance: <strong>${stats.alcance_total.toLocaleString()}</strong></span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Função para atualizar tabela com dados
+        function atualizarTabelaComDados(demandas) {
+            const tbody = document.querySelector('#demandas-table tbody');
+            tbody.innerHTML = '';
+
+            demandas.forEach(demanda => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${demanda.id}</td>
+                    <td>${demanda.professor}</td>
+                    <td>${demanda.tipo_conteudo}</td>
+                    <td>${new Date(demanda.data_envio).toLocaleDateString('pt-BR')}</td>
+                    <td>${new Date(demanda.prazo_entrega).toLocaleDateString('pt-BR')}</td>
+                    <td>${demanda.material_entregue || 'Pendente'}</td>
+                    <td>${demanda.alcance_professor || '-'}</td>
+                    <td>${demanda.curtidas_professor || '-'}</td>
+                    <td>${demanda.comentarios_professor || '-'}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="excluirDemanda(${demanda.id})">Excluir</button>
+                    </td>
+                `;
+            });
+        }
+
+        // Função para excluir demanda
+        async function excluirDemanda(id) {
+            if (confirm('Tem certeza que deseja excluir esta demanda?')) {
+                try {
+                    const response = await fetch(`/api/demandas/${id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        mostrarAlerta('alert-container', 'Demanda excluída com sucesso!', 'success');
+                        atualizarDadosComFiltros();
+                        atualizarSelectDemandas();
+                    } else {
+                        mostrarAlerta('alert-container', 'Erro ao excluir demanda!', 'error');
+                    }
+                } catch (error) {
+                    console.error('Erro ao excluir demanda:', error);
+                    mostrarAlerta('alert-container', 'Erro ao excluir demanda!', 'error');
+                }
+            }
+        }
+
+        // Função para atualizar select de demandas
+        async function atualizarSelectDemandas() {
+            try {
+                const response = await fetch('/api/demandas');
+                const demandas = await response.json();
+                
+                const select = document.getElementById('demanda-id');
+                select.innerHTML = '<option value="">Selecione uma demanda</option>';
+                
+                demandas.filter(d => !d.material_entregue || d.material_entregue === 'Não').forEach(demanda => {
+                    const option = document.createElement('option');
+                    option.value = demanda.id;
+                    option.textContent = `DEM${String(demanda.id).padStart(3, '0')} - ${demanda.professor} (${demanda.tipo_conteudo})`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erro ao atualizar select de demandas:', error);
+            }
+        }
+
+        // Função para mostrar alertas
+        function mostrarAlerta(containerId, mensagem, tipo = 'success') {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${tipo}`;
+            alert.style.cssText = `
+                padding: 15px;
+                margin-bottom: 20px;
+                border-radius: 8px;
+                font-weight: 500;
+                ${tipo === 'success' ? 'background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724;' : 'background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24;'}
+            `;
+            alert.textContent = mensagem;
+            container.innerHTML = '';
+            container.appendChild(alert);
+            
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 3000);
+        }
+
+        // Função para atualizar tudo
+        function atualizarTudo() {
+            atualizarDadosComFiltros();
+            atualizarSelectDemandas();
+        }
+
+        // Event listener para nova demanda
+        document.getElementById('nova-demanda-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const novaDemanda = {
+                professor: document.getElementById('professor').value,
+                tipo_conteudo: document.getElementById('tipo-conteudo').value,
+                prazo_entrega: document.getElementById('prazo-entrega').value
+            };
+
+            try {
+                const response = await fetch('/api/demandas', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(novaDemanda)
+                });
+
+                if (response.ok) {
+                    this.reset();
+                    mostrarAlerta('alert-container', 'Demanda registrada com sucesso!', 'success');
+                    atualizarTudo();
+                } else {
+                    mostrarAlerta('alert-container', 'Erro ao registrar demanda!', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao registrar demanda:', error);
+                mostrarAlerta('alert-container', 'Erro ao registrar demanda!', 'error');
+            }
+        });
+
+        // Event listener para resultado
+        document.getElementById('resultado-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const demandaId = document.getElementById('demanda-id').value;
+            const resultado = {
+                material_entregue: document.getElementById('material-entregue').value,
+                alcance_professor: parseInt(document.getElementById('alcance').value) || 0,
+                curtidas_professor: parseInt(document.getElementById('curtidas').value) || 0,
+                comentarios_professor: parseInt(document.getElementById('comentarios').value) || 0
+            };
+
+            try {
+                const response = await fetch(`/api/demandas/${demandaId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(resultado)
+                });
+
+                if (response.ok) {
+                    this.reset();
+                    mostrarAlerta('alert-container-resultado', 'Resultado registrado com sucesso!', 'success');
+                    atualizarTudo();
+                } else {
+                    mostrarAlerta('alert-container-resultado', 'Erro ao registrar resultado!', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao registrar resultado:', error);
+                mostrarAlerta('alert-container-resultado', 'Erro ao registrar resultado!', 'error');
+            }
+        });
+
+        // Função para exportar CSV
+        function exportarCSV() {
+            const url = construirUrlComFiltros('/api/exportar/csv');
+            window.open(url, '_blank');
+        }
+
+        // Função para exportar PDF
+        function exportarPDF() {
+            const url = construirUrlComFiltros('/api/exportar/pdf');
+            window.open(url, '_blank');
+        }
+
         // Inicializar dashboard
-        atualizarEstatisticas();
-        atualizarEstatisticasProfessores();
-        atualizarTabela();
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
+        });
     </script>
 </body>
 </html>
