@@ -13,6 +13,7 @@ from src.routes.user import user_bp
 from src.routes.dashboard import dashboard_bp
 from src.routes.auth import auth_bp
 from src.routes.notification import notification_bp
+from src.routes.professor import professor_bp  # ✅ Novo import
 
 # ✅ Criar a aplicação primeiro
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
@@ -37,6 +38,7 @@ app.register_blueprint(user_bp, url_prefix='/api')
 app.register_blueprint(dashboard_bp, url_prefix='/api')
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(notification_bp, url_prefix='/api/notifications')
+app.register_blueprint(professor_bp, url_prefix='/api/professores') 
 
 # ✅ Criar as tabelas e dados padrão
 with app.app_context():
