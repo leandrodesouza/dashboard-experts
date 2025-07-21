@@ -11,7 +11,7 @@ class Coordenador(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     nome = db.Column(db.String(100), nullable=False)
     ativo = db.Column(db.Boolean, default=True)
-    
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
     
@@ -26,19 +26,17 @@ class Coordenador(UserMixin, db.Model):
             'nome': self.nome,
             'ativo': self.ativo
         }
-    
+
     @staticmethod
     def create_default_user():
-        """Cria um usuário padrão se não existir nenhum coordenador"""
         if not Coordenador.query.first():
             coordenador = Coordenador(
                 username='admin',
                 email='admin@alfacon.com.br',
                 nome='Administrador'
             )
-            coordenador.set_password('admin123')  # Senha padrão - deve ser alterada
+            coordenador.set_password('admin123')
             db.session.add(coordenador)
             db.session.commit()
             return coordenador
         return None
-

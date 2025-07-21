@@ -1,4 +1,4 @@
-from src.models.user import db
+from src.db import db
 from datetime import datetime
 
 class TemplateNotificacao(db.Model):
@@ -6,12 +6,12 @@ class TemplateNotificacao(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
-    tipo = db.Column(db.String(20), nullable=False)  # 'email' ou 'whatsapp'
-    assunto = db.Column(db.String(200))  # Para e-mail
+    tipo = db.Column(db.String(20), nullable=False)
+    assunto = db.Column(db.String(200))
     conteudo = db.Column(db.Text, nullable=False)
     ativo = db.Column(db.Boolean, default=True)
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -22,12 +22,10 @@ class TemplateNotificacao(db.Model):
             'ativo': self.ativo,
             'criado_em': self.criado_em.isoformat() if self.criado_em else None
         }
-    
+
     @staticmethod
     def create_default_templates():
-        """Cria templates padrão se não existirem"""
         if not TemplateNotificacao.query.first():
-            # Template de e-mail
             template_email = TemplateNotificacao(
                 nome='Roteiro Padrão - E-mail',
                 tipo='email',
@@ -57,8 +55,7 @@ Obrigado pela sua dedicação ao Projeto Experts!
 Atenciosamente,
 Equipe AlfaCon"""
             )
-            
-            # Template de WhatsApp
+
             template_whatsapp = TemplateNotificacao(
                 nome='Roteiro Padrão - WhatsApp',
                 tipo='whatsapp',
@@ -82,29 +79,27 @@ Dúvidas? É só chamar! 😊
 
 *Equipe AlfaCon* 🚀"""
             )
-            
+
             db.session.add(template_email)
             db.session.add(template_whatsapp)
             db.session.commit()
-            
             return [template_email, template_whatsapp]
         return []
 
 class NotificacaoEnviada(db.Model):
     __tablename__ = 'notificacoes_enviadas'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    demanda_id = db.Column(db.Integer, nullable=False)  # Removido ForeignKey temporariamente
+    demanda_id = db.Column(db.Integer, nullable=False)
     template_id = db.Column(db.Integer, db.ForeignKey('templates_notificacao.id'), nullable=False)
-    tipo = db.Column(db.String(20), nullable=False)  # 'email' ou 'whatsapp'
+    tipo = db.Column(db.String(20), nullable=False)
     destinatario = db.Column(db.String(200), nullable=False)
-    status = db.Column(db.String(20), default='enviado')  # 'enviado', 'erro', 'pendente'
+    status = db.Column(db.String(20), default='enviado')
     erro_detalhes = db.Column(db.Text)
     enviado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relacionamentos
+
     template = db.relationship('TemplateNotificacao', backref='envios')
-    
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -116,4 +111,3 @@ class NotificacaoEnviada(db.Model):
             'erro_detalhes': self.erro_detalhes,
             'enviado_em': self.enviado_em.isoformat() if self.enviado_em else None
         }
-

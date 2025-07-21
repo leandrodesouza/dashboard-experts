@@ -1,7 +1,5 @@
-from flask_sqlalchemy import SQLAlchemy
+from src.db import db
 from datetime import datetime
-
-db = SQLAlchemy()
 
 class Demanda(db.Model):
     __tablename__ = 'demandas'
@@ -13,10 +11,10 @@ class Demanda(db.Model):
     data_envio = db.Column(db.Date, nullable=False, default=datetime.now().date())
     prazo_entrega = db.Column(db.Date, nullable=False)
     data_entrega = db.Column(db.Date, nullable=True)
-    material_entregue = db.Column(db.String(10), nullable=True)  # 'Sim' ou 'Não'
-    conformidade_roteiro = db.Column(db.String(10), nullable=True)  # 'Sim' ou 'Não'
-    plataforma_publicacao = db.Column(db.String(50), nullable=True)  # 'Professor', 'AlfaCon', 'Ambos'
-    
+    material_entregue = db.Column(db.String(10), nullable=True)
+    conformidade_roteiro = db.Column(db.String(10), nullable=True)
+    plataforma_publicacao = db.Column(db.String(50), nullable=True)
+
     # Métricas do Instagram do Professor
     alcance_professor = db.Column(db.Integer, nullable=True)
     impressoes_professor = db.Column(db.Integer, nullable=True)
@@ -25,7 +23,7 @@ class Demanda(db.Model):
     compartilhamentos_professor = db.Column(db.Integer, nullable=True)
     salvos_professor = db.Column(db.Integer, nullable=True)
     visualizacoes_professor = db.Column(db.Integer, nullable=True)
-    
+
     # Métricas do Instagram do AlfaCon
     alcance_alfacon = db.Column(db.Integer, nullable=True)
     impressoes_alfacon = db.Column(db.Integer, nullable=True)
@@ -34,10 +32,9 @@ class Demanda(db.Model):
     compartilhamentos_alfacon = db.Column(db.Integer, nullable=True)
     salvos_alfacon = db.Column(db.Integer, nullable=True)
     visualizacoes_alfacon = db.Column(db.Integer, nullable=True)
-    
-    # Tráfego gerado
+
     trafego_gerado = db.Column(db.String(200), nullable=True)
-    
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -71,4 +68,3 @@ class Demanda(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
-
