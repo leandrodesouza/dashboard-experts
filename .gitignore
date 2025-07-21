@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+.env
+.venv
+*.sqlite3
+*.log
+
+# VSCode
+.vscode/
+
+# macOS
+.DS_Store
+
+# Bibliotecas e dependências
+*.so
+*.dylib
+*.dll
+*.pyd
+*.whl
+site-packages/
