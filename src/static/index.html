@@ -922,7 +922,7 @@
                 data.forEach(prof => {
                     const option = document.createElement('option');
                     option.value = prof.id; // ✅ value será o ID do professor
-                    option.textContent = `${prof.nome} - ${prof.disciplina}`;
+                    option.textContent = `${prof.nome} - ${prof.disciplinas}`;
                     select.appendChild(option);
                 });
                 })
