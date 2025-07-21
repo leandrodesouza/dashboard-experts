@@ -341,10 +341,8 @@
                 <button type="submit" class="btn">Entrar</button>
             </form>
             <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                <p><strong>Credenciais padrão:</strong></p>
-                <p>Usuário: <code>admin</code></p>
-                <p>Senha: <code>admin123</code></p>
-                <small>Por favor, altere a senha após o primeiro login.</small>
+                <p><strong>Use as credenciais recebidas no email:</strong></p>
+                <small>Em caso de Dúvidas. Entrar em contato <code>leandro.souza@alfaconcursos.com.br</code>.</small>
             </div>
         </div>
     </div>
@@ -425,17 +423,6 @@
                         <label for="professor">Professor:</label>
                         <select id="professor" required>
                             <option value="">Selecione um professor</option>
-                            <option value="Pedro Campos">Pedro Campos - Matemática/RLM e Estatística</option>
-                            <option value="Pablo">Pablo - Português e Redação Oficial</option>
-                            <option value="Rafael Araújo">Rafael Araújo - Informática</option>
-                            <option value="Samuel">Samuel - Contabilidade</option>
-                            <option value="Tiago Vidal">Tiago Vidal - Direito Administrativo</option>
-                            <option value="Rogério Dalvipa">Rogério Dalvipa - Direito Constitucional</option>
-                            <option value="Lucas Fávero">Lucas Fávero - Direito Penal</option>
-                            <option value="Pedro Canezin">Pedro Canezin - Processo Penal</option>
-                            <option value="Filipe Ávila">Filipe Ávila - Legislação Especial</option>
-                            <option value="João Paulo">João Paulo - Arquivologia</option>
-                            <option value="Heitor">Heitor - Redação</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -924,6 +911,16 @@
                 showLoginModal();
             }
         }
+
+        // Preenche o select de professores dinamicamente
+        const selectProfessor = document.getElementById('professor');
+        professores.forEach(prof => {
+            const option = document.createElement('option');
+            option.value = prof.nome;
+            option.textContent = `${prof.nome} - ${prof.disciplina}`;
+            selectProfessor.appendChild(option);
+        });
+
 
         // Função para mostrar modal de login
         function showLoginModal() {
