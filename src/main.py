@@ -40,6 +40,7 @@ app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(notification_bp, url_prefix='/api/notifications')
 app.register_blueprint(professor_bp, url_prefix='/api/professores') 
 
+
 # ✅ Criar as tabelas e dados padrão
 with app.app_context():
     db.create_all()

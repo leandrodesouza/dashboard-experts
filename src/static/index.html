@@ -913,13 +913,24 @@
         }
 
         // Preenche o select de professores dinamicamente
-        const selectProfessor = document.getElementById('professor');
-        professores.forEach(prof => {
-            const option = document.createElement('option');
-            option.value = prof.nome;
-            option.textContent = `${prof.nome} - ${prof.disciplina}`;
-            selectProfessor.appendChild(option);
-        });
+
+            document.addEventListener("DOMContentLoaded", function () {
+            fetch('/api/professores')
+                .then(response => response.json())
+                .then(data => {
+                const select = document.getElementById('professor');
+                data.forEach(prof => {
+                    const option = document.createElement('option');
+                    option.value = prof.id; // ✅ value será o ID do professor
+                    option.textContent = `${prof.nome} - ${prof.disciplina}`;
+                    select.appendChild(option);
+                });
+                })
+                .catch(error => {
+                   console.error("Erro ao carregar professores:", error);
+                });
+            });
+
 
 
         // Função para mostrar modal de login
