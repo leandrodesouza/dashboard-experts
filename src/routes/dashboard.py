@@ -3,6 +3,8 @@ from flask_login import login_required
 from src.models.demanda import Demanda, db
 from datetime import datetime, timedelta
 from sqlalchemy import and_
+from src.models.professor import Professor
+
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -32,8 +34,22 @@ def get_demandas():
             Demanda.data_envio <= data_fim_obj
         ))
     
-    demandas = query.all()
-    return jsonify([demanda.to_dict() for demanda in demandas])
+    # Realiza o join com Professor para trazer nome e disciplina
+    resultados = db.session.query(
+        Demanda,
+        Professor.nome.label('professor_nome')
+    ).join(Professor, Demanda.professor_id == Professor.id).filter(query._criterion if hasattr(query, '_criterion') else True).all()
+
+    # Monta o JSON customizado
+    lista = []
+    for demanda, professor_nome in resultados:
+        d = demanda.to_dict()
+        d['professor'] = professor_nome
+        lista.append(d)
+
+    return jsonify(lista)
+
+   # return jsonify([demanda.to_dict() for demanda in demandas])
 
 @dashboard_bp.route('/demandas', methods=['POST'])
 @login_required
