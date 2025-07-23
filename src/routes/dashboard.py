@@ -1,10 +1,9 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
-from src.models.demanda import Demanda, db
 from datetime import datetime, timedelta
 from sqlalchemy import and_
-from src.models.professor import Professor
-
+from app import db
+from app.models import Demanda, Professor
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -15,9 +14,9 @@ def get_demandas():
     filtro_periodo = request.args.get('periodo', 'todos')
     data_inicio = request.args.get('data_inicio')
     data_fim = request.args.get('data_fim')
-    
+
     query = Demanda.query
-    
+
     # Aplicar filtros de período
     if filtro_periodo == 'ultimos_7_dias':
         data_limite = datetime.now().date() - timedelta(days=7)
@@ -33,22 +32,22 @@ def get_demandas():
             Demanda.data_envio >= data_inicio_obj,
             Demanda.data_envio <= data_fim_obj
         ))
-    
-    # Realiza o join com Professor para trazer nome e disciplina
-        resultados = db.session.query(
-            Demanda,
-            Professor.nome.label('professor_nome'),
-            Professor.disciplina.label('professor_disciplina')
-        ).join(Professor, Demanda.professor_id == Professor.id)\
-        .filter(query._criterion if hasattr(query, '_criterion') else True)\
-        .all()
 
-        # Monta o JSON customizado
-        lista = []
-        for demanda, professor_nome, professor_disciplina in resultados:
-            d = {
+    # Realiza o join com Professor para trazer nome e disciplina
+    resultados = db.session.query(
+        Demanda,
+        Professor.nome.label('professor_nome'),
+        Professor.disciplina.label('professor_disciplina')
+    ).join(Professor, Demanda.professor_id == Professor.id)\
+     .filter(query._criterion if hasattr(query, '_criterion') else True)\
+     .all()
+
+    # Monta o JSON customizado
+    lista = []
+    for demanda, professor_nome, professor_disciplina in resultados:
+        d = {
             'id': demanda.id,
-            'professor': f"{professor_nome} – {professor_disciplina or ''}",
+            'professor': f"{professor_nome} - {professor_disciplina or ''}",
             'tipo_conteudo': demanda.tipo_conteudo,
             'data_envio': demanda.data_envio.strftime('%d/%m/%Y') if demanda.data_envio else '',
             'prazo_entrega': demanda.prazo_entrega.strftime('%d/%m/%Y') if demanda.prazo_entrega else '',
@@ -56,11 +55,10 @@ def get_demandas():
             'alcance_professor': demanda.alcance_professor or 0,
             'curtidas_professor': demanda.curtidas_professor or 0,
             'comentarios_professor': demanda.comentarios_professor or 0,
-            }
-            lista.append(d)
-        return jsonify(lista)
+        }
+        lista.append(d)
 
-
+    return jsonify(lista)
 
    # return jsonify([demanda.to_dict() for demanda in demandas])
 
