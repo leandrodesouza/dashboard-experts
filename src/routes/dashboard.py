@@ -43,22 +43,23 @@ def get_demandas():
         .filter(query._criterion if hasattr(query, '_criterion') else True)\
         .all()
 
+        # Monta o JSON customizado
         lista = []
         for demanda, professor_nome, professor_disciplina in resultados:
-            d = demanda.to_dict()
-            d['professor'] = f"{professor_nome} - {professor_disciplina or ''}"
+            d = {
+            'id': demanda.id,
+            'professor': f"{professor_nome} – {professor_disciplina or ''}",
+            'tipo_conteudo': demanda.tipo_conteudo,
+            'data_envio': demanda.data_envio.strftime('%d/%m/%Y') if demanda.data_envio else '',
+            'prazo_entrega': demanda.prazo_entrega.strftime('%d/%m/%Y') if demanda.prazo_entrega else '',
+            'material_entregue': demanda.material_entregue or 'Pendente',
+            'alcance_professor': demanda.alcance_professor or 0,
+            'curtidas_professor': demanda.curtidas_professor or 0,
+            'comentarios_professor': demanda.comentarios_professor or 0,
+            }
             lista.append(d)
-
         return jsonify(lista)
 
-
-
-    # Monta o JSON customizado
-    lista = []
-    for demanda, professor_nome, professor_disciplina in resultados:
-    d = demanda.to_dict()
-    d['professor'] = f"{professor_nome} - {professor_disciplina or ''}"
-    lista.append(d)
 
 
    # return jsonify([demanda.to_dict() for demanda in demandas])
