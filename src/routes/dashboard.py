@@ -3,7 +3,9 @@ from flask_login import login_required
 from datetime import datetime, timedelta
 from sqlalchemy import and_
 from src.db import db
-from src.models import Demanda, Professor
+from src.models.demanda import Demanda
+from src.models.professor import Professor
+
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
