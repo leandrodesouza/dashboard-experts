@@ -1,7 +1,4 @@
 import os
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
 from flask import Flask, send_from_directory
 from flask_login import LoginManager
 from src.db import db
@@ -15,18 +12,20 @@ from src.routes.auth import auth_bp
 from src.routes.notification import notification_bp
 from src.routes.professor import professor_bp
 
-# Criação da aplicação
+# Criação da aplicação Flask
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
-# Configurações
+# Configurações do Flask
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback-dev-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 if not app.config['SQLALCHEMY_DATABASE_URI']:
     raise RuntimeError("DATABASE_URL not set in environment variables.")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Inicialização da extensão do banco de dados
 db.init_app(app)
 
-# Login
+# Configuração do Login Manager
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
@@ -35,20 +34,20 @@ login_manager.login_view = 'auth.login'
 def load_user(user_id):
     return Coordenador.query.get(int(user_id))
 
-# Blueprints
+# Registro dos blueprints
 app.register_blueprint(user_bp, url_prefix='/api')
 app.register_blueprint(dashboard_bp, url_prefix='/api')
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(notification_bp, url_prefix='/api/notifications')
 app.register_blueprint(professor_bp, url_prefix='/api/professores')
 
-# Inicialização do banco
+# Inicialização do banco com templates e usuário padrão
 with app.app_context():
     db.create_all()
     Coordenador.create_default_user()
     TemplateNotificacao.create_default_templates()
 
-# Frontend SPA
+# Servir a SPA (Single Page Application)
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
