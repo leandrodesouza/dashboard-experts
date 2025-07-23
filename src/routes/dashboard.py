@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required
 from datetime import datetime, timedelta
 from sqlalchemy import and_
-from app import db
+from src.db import db
 from app.models import Demanda, Professor
 
 dashboard_bp = Blueprint('dashboard', __name__)
