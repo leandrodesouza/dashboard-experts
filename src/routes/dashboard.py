@@ -35,19 +35,31 @@ def get_demandas():
         ))
     
     # Realiza o join com Professor para trazer nome e disciplina
-    resultados = db.session.query(
-        Demanda,
-        Professor.nome.label('professor_nome')
-    ).join(Professor, Demanda.professor_id == Professor.id).filter(query._criterion if hasattr(query, '_criterion') else True).all()
+        resultados = db.session.query(
+            Demanda,
+            Professor.nome.label('professor_nome'),
+            Professor.disciplina.label('professor_disciplina')
+        ).join(Professor, Demanda.professor_id == Professor.id)\
+        .filter(query._criterion if hasattr(query, '_criterion') else True)\
+        .all()
+
+        lista = []
+        for demanda, professor_nome, professor_disciplina in resultados:
+            d = demanda.to_dict()
+            d['professor'] = f"{professor_nome} - {professor_disciplina or ''}"
+            lista.append(d)
+
+        return jsonify(lista)
+
+
 
     # Monta o JSON customizado
     lista = []
-    for demanda, professor_nome in resultados:
-        d = demanda.to_dict()
-        d['professor'] = professor_nome
-        lista.append(d)
+    for demanda, professor_nome, professor_disciplina in resultados:
+    d = demanda.to_dict()
+    d['professor'] = f"{professor_nome} - {professor_disciplina or ''}"
+    lista.append(d)
 
-    return jsonify(lista)
 
    # return jsonify([demanda.to_dict() for demanda in demandas])
 
